@@ -1,0 +1,145 @@
+import maplibregl, { AddLayerObject } from "maplibre-gl";
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MAPTILER_KEY } from "./constants";
+import { models } from "./models";
+import { calculateDistanceMercatorToMeters } from "./utils/calculateDistanceMercatorToMeters";
+
+const sceneOrigin = new maplibregl.LngLat(2.3694596857951638, 48.88353262931881);
+
+async function loadModel(model) {
+  const loader = new GLTFLoader();
+  const gltf = await loader.loadAsync(model.path);
+  const loadedModel = gltf.scene;
+
+  // Getting model x and y (in meters) relative to scene origin.
+  const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(sceneOrigin);
+  const modelLocation = new maplibregl.LngLat(model.origin.lng, model.origin.lat);
+  const modelMercator = maplibregl.MercatorCoordinate.fromLngLat(modelLocation);
+  const { dEastMeter, dNorthMeter } = calculateDistanceMercatorToMeters(
+    sceneOriginMercator,
+    modelMercator
+  );
+
+  // position model
+  loadedModel.position.set(dEastMeter, 0, dNorthMeter);
+  return loadedModel;
+}
+
+async function modelsTerrain() {
+  const map = new maplibregl.Map({
+    container: "map",
+    center: sceneOrigin,
+    zoom: 15,
+    pitch: 45,
+    maxPitch: 80, // default 60
+    bearing: -17.6, // rotation
+    canvasContextAttributes: { antialias: true },
+    style: `https://api.maptiler.com/maps/voyager/style.json?key=${MAPTILER_KEY}`,
+  });
+
+  // Add zoom and rotation controls to the map.
+  map.addControl(
+    new maplibregl.NavigationControl({
+      visualizePitch: true,
+      visualizeRoll: true,
+      showZoom: true,
+      showCompass: true,
+    })
+  );
+
+  // Custom layer for a 3D model, implementing `CustomLayerInterface`
+  const customLayerWith3DModels: AddLayerObject = {
+    id: "3d-models",
+    type: "custom",
+    renderingMode: "3d",
+
+    onAdd(map, gl) {
+      this.camera = new THREE.Camera();
+      this.scene = new THREE.Scene();
+
+      // In threejs, y points up
+      this.scene.rotateX(Math.PI / 2);
+
+      // In threejs, z points toward the viewer - mirroring it such that z points along maplibre's north.
+      this.scene.scale.multiply(new THREE.Vector3(1, 1, -1));
+
+      // We now have a scene with (x=east, y=up, z=north)
+
+      const light = new THREE.DirectionalLight(0xffffff);
+      // Making it just before noon - light coming from south-east.
+      light.position.set(50, 70, -30).normalize();
+      this.scene.add(light);
+
+      // Axes helper to show how threejs scene is oriented.
+      const axesHelper = new THREE.AxesHelper(60);
+      this.scene.add(axesHelper);
+
+      loadedModels.forEach((model) => this.scene.add(model));
+
+      // Use the MapLibre GL JS map canvas for three.js.
+      this.renderer = new THREE.WebGLRenderer({
+        canvas: map.getCanvas(),
+        context: gl,
+        antialias: true,
+      });
+
+      this.renderer.autoClear = false;
+    },
+
+    render(gl, args) {
+      const offsetFromCenterElevation = map.queryTerrainElevation(sceneOrigin) || 0;
+      const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(
+        sceneOrigin,
+        offsetFromCenterElevation
+      );
+
+      const sceneTransform = {
+        translateX: sceneOriginMercator.x,
+        translateY: sceneOriginMercator.y,
+        translateZ: sceneOriginMercator.z,
+        scale: sceneOriginMercator.meterInMercatorCoordinateUnits(),
+      };
+
+      const m = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix);
+      const l = new THREE.Matrix4()
+        .makeTranslation(
+          sceneTransform.translateX,
+          sceneTransform.translateY,
+          sceneTransform.translateZ
+        )
+        .scale(
+          new THREE.Vector3(sceneTransform.scale, -sceneTransform.scale, sceneTransform.scale)
+        );
+
+      this.camera.projectionMatrix = m.multiply(l);
+      this.renderer.resetState();
+      this.renderer.render(this.scene, this.camera);
+      map.triggerRepaint();
+    },
+  };
+
+  // load models
+  const results = await Promise.all([map.once("load"), ...models.map(loadModel)]);
+
+  // remove the first result which is the "load" event
+  const loadedModels = results.slice(1);
+
+  map.addLayer(customLayerWith3DModels);
+
+  map.on("mousemove", (e) => {
+    const coordinatesElement = document.getElementById("coordinates");
+    if (coordinatesElement) {
+      const cursorLatLng = JSON.stringify(e.lngLat.wrap());
+      coordinatesElement.innerHTML = `${cursorLatLng}`;
+    }
+  });
+
+  map.on("click", (e) => {
+    const cursorLatLng = e.lngLat.wrap();
+    console.log("click", cursorLatLng);
+    navigator.clipboard.writeText(JSON.stringify(cursorLatLng));
+  });
+}
+
+export default modelsTerrain;
