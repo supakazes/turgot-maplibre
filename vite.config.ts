@@ -1,5 +1,11 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  root: "",
+  base: "./",
+  resolve: {
+    alias: {
+      // '@config': '/src/config',
+      src: "/src",
+    },
+  },
 });

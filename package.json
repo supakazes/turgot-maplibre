@@ -1,5 +1,5 @@
 {
-  "name": "vite-starter",
+  "name": "turgot-maplibre",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,10 +9,20 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/node": "^22.13.8",
+    "@types/three": "^0.174.0",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
+    "typescript": "^5.7.3",
     "vite": "^6.0.7"
   },
   "dependencies": {
     "maplibre-gl": "^5.0.1",
     "three": "^0.172.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }
