@@ -23,6 +23,8 @@ async function loadModel(model: ModelDefinition) {
 
   // position model
   loadedModel.position.set(dEastMeter, 0, dNorthMeter);
+  loadedModel.rotateY(model.rotation);
+
   return loadedModel;
 }
 
@@ -30,7 +32,7 @@ async function modelsTerrain() {
   const map = new maplibregl.Map({
     container: "map",
     center: sceneOrigin,
-    zoom: 15,
+    zoom: 18,
     pitch: 45,
     maxPitch: 80, // default 60
     bearing: -17.6, // rotation
