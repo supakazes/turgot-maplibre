@@ -12,7 +12,7 @@ export const modelsList: ModelDefinition[] = [
   },
   {
     path: "/src/models/house/house.glb",
-    origin: { lng: 2.370598777169562, lat: 48.885831619533406 },
+    origin: { lng: 2.3686339204380147, lat: 48.88446609167394 },
     rotation: 0.5,
   },
 ];
