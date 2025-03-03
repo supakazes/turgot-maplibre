@@ -82,8 +82,8 @@ async function modelsTerrain() {
       const axesHelper = new THREE.AxesHelper(60);
       this.scene.add(axesHelper);
 
+      // load and position models
       const loadedModels = await Promise.all(modelsList.map(loadModel));
-
       loadedModels.forEach((model) => this.scene?.add(model));
 
       // Use the MapLibre GL JS map canvas for three.js.
