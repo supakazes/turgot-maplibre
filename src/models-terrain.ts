@@ -2,7 +2,7 @@ import maplibregl, { AddLayerObject } from "maplibre-gl";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { MAPTILER_KEY } from "src/constants";
-import { ModelDefinition, modelsList } from "src/models";
+import { ModelDefinition, modelsList } from "src/models-list";
 import { calculateDistanceMercatorToMeters } from "src/utils/calculateDistanceMercatorToMeters";
 
 const sceneOrigin = new maplibregl.LngLat(2.3694596857951638, 48.88353262931881);
@@ -62,7 +62,7 @@ async function modelsTerrain() {
     camera: new THREE.Camera(),
     scene: new THREE.Scene(),
 
-    onAdd(map, gl) {
+    async onAdd(map, gl) {
       // In threejs, y points up
       this.scene.rotateX(Math.PI / 2);
 
@@ -79,6 +79,8 @@ async function modelsTerrain() {
       // Axes helper to show how threejs scene is oriented.
       const axesHelper = new THREE.AxesHelper(60);
       this.scene.add(axesHelper);
+
+      const loadedModels = await Promise.all(modelsList.map(loadModel));
 
       loadedModels.forEach((model) => this.scene?.add(model));
 
@@ -125,13 +127,9 @@ async function modelsTerrain() {
     },
   };
 
-  // load models
-  const results = await Promise.all([map.once("load"), ...modelsList.map(loadModel)]);
-
-  // remove the first result which is the "load" event
-  const loadedModels = results.slice(1);
-
-  map.addLayer(customLayerWith3DModels);
+  map.on("load", () => {
+    map.addLayer(customLayerWith3DModels);
+  });
 
   map.on("mousemove", (e) => {
     const coordinatesElement = document.getElementById("coordinates");
