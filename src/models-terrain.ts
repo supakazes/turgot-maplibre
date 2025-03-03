@@ -1,13 +1,13 @@
 import maplibregl, { AddLayerObject } from "maplibre-gl";
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { MAPTILER_KEY } from "./constants";
-import { models } from "./models";
-import { calculateDistanceMercatorToMeters } from "./utils/calculateDistanceMercatorToMeters";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { MAPTILER_KEY } from "src/constants";
+import { ModelDefinition, modelsList } from "src/models";
+import { calculateDistanceMercatorToMeters } from "src/utils/calculateDistanceMercatorToMeters";
 
 const sceneOrigin = new maplibregl.LngLat(2.3694596857951638, 48.88353262931881);
 
-async function loadModel(model) {
+async function loadModel(model: ModelDefinition) {
   const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(model.path);
   const loadedModel = gltf.scene;
@@ -49,15 +49,20 @@ async function modelsTerrain() {
   );
 
   // Custom layer for a 3D model, implementing `CustomLayerInterface`
-  const customLayerWith3DModels: AddLayerObject = {
+  interface CustomLayerWith3DModels extends maplibregl.CustomLayerInterface {
+    camera: THREE.Camera;
+    scene: THREE.Scene;
+    renderer?: THREE.WebGLRenderer;
+  }
+
+  const customLayerWith3DModels: CustomLayerWith3DModels = {
     id: "3d-models",
     type: "custom",
     renderingMode: "3d",
+    camera: new THREE.Camera(),
+    scene: new THREE.Scene(),
 
     onAdd(map, gl) {
-      this.camera = new THREE.Camera();
-      this.scene = new THREE.Scene();
-
       // In threejs, y points up
       this.scene.rotateX(Math.PI / 2);
 
@@ -75,7 +80,7 @@ async function modelsTerrain() {
       const axesHelper = new THREE.AxesHelper(60);
       this.scene.add(axesHelper);
 
-      loadedModels.forEach((model) => this.scene.add(model));
+      loadedModels.forEach((model) => this.scene?.add(model));
 
       // Use the MapLibre GL JS map canvas for three.js.
       this.renderer = new THREE.WebGLRenderer({
@@ -106,6 +111,7 @@ async function modelsTerrain() {
         .makeTranslation(
           sceneTransform.translateX,
           sceneTransform.translateY,
+
           sceneTransform.translateZ
         )
         .scale(
@@ -113,14 +119,14 @@ async function modelsTerrain() {
         );
 
       this.camera.projectionMatrix = m.multiply(l);
-      this.renderer.resetState();
-      this.renderer.render(this.scene, this.camera);
+      this.renderer?.resetState();
+      this.renderer?.render(this.scene, this.camera);
       map.triggerRepaint();
     },
   };
 
   // load models
-  const results = await Promise.all([map.once("load"), ...models.map(loadModel)]);
+  const results = await Promise.all([map.once("load"), ...modelsList.map(loadModel)]);
 
   // remove the first result which is the "load" event
   const loadedModels = results.slice(1);
