@@ -11,7 +11,7 @@ export const modelsList: ModelDefinition[] = [
     rotation: 0.9,
   },
   {
-    path: "/src/models/matilda/scene.gltf",
+    path: "/src/models/house/house.glb",
     origin: { lng: 2.370598777169562, lat: 48.885831619533406 },
     rotation: 0.5,
   },
