@@ -1,11 +1,29 @@
 import maplibregl, { AddLayerObject } from "maplibre-gl";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+// import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { MAPTILER_KEY } from "src/constants";
 import { ModelDefinition, modelsList } from "src/models-list";
 import { calculateDistanceMercatorToMeters } from "src/utils/calculateDistanceMercatorToMeters";
 
 const sceneOrigin = new maplibregl.LngLat(2.3694596857951638, 48.88353262931881);
+
+const map = new maplibregl.Map({
+  container: "map",
+  center: sceneOrigin,
+  zoom: 18,
+  pitch: 45,
+  maxPitch: 80, // default 60
+  bearing: -17.6, // rotation
+  canvasContextAttributes: { antialias: true },
+  style: `https://api.maptiler.com/maps/voyager/style.json?key=${MAPTILER_KEY}`,
+});
+
+const renderer = new THREE.WebGLRenderer({
+  canvas: map.getCanvas(),
+  context: map.getCanvas().getContext("webgl2") as WebGLRenderingContext,
+  antialias: true,
+});
 
 async function loadModel(model: ModelDefinition) {
   const loader = new GLTFLoader();
@@ -29,17 +47,6 @@ async function loadModel(model: ModelDefinition) {
 }
 
 async function modelsTerrain() {
-  const map = new maplibregl.Map({
-    container: "map",
-    center: sceneOrigin,
-    zoom: 18,
-    pitch: 45,
-    maxPitch: 80, // default 60
-    bearing: -17.6, // rotation
-    canvasContextAttributes: { antialias: true },
-    style: `https://api.maptiler.com/maps/voyager/style.json?key=${MAPTILER_KEY}`,
-  });
-
   // Add zoom and rotation controls to the map.
   map.addControl(
     new maplibregl.NavigationControl({
@@ -54,7 +61,6 @@ async function modelsTerrain() {
   interface CustomLayerWith3DModels extends maplibregl.CustomLayerInterface {
     camera: THREE.Camera;
     scene: THREE.Scene;
-    renderer?: THREE.WebGLRenderer;
   }
 
   const customLayerWith3DModels: CustomLayerWith3DModels = {
@@ -86,14 +92,7 @@ async function modelsTerrain() {
       const loadedModels = await Promise.all(modelsList.map(loadModel));
       loadedModels.forEach((model) => this.scene?.add(model));
 
-      // Use the MapLibre GL JS map canvas for three.js.
-      this.renderer = new THREE.WebGLRenderer({
-        canvas: map.getCanvas(),
-        context: gl,
-        antialias: true,
-      });
-
-      this.renderer.autoClear = false;
+      renderer.autoClear = false;
     },
 
     render(gl, args) {
@@ -123,8 +122,8 @@ async function modelsTerrain() {
         );
 
       this.camera.projectionMatrix = m.multiply(l);
-      this.renderer?.resetState();
-      this.renderer?.render(this.scene, this.camera);
+      renderer?.resetState();
+      renderer?.render(this.scene, this.camera);
       map.triggerRepaint();
     },
   };
