@@ -81,6 +81,7 @@ async function modelsTerrain() {
     raycast: (point: { x: number; y: number }) => void;
     loadedModels: THREE.Object3D[];
     previousIntersectedObject?: THREE.Object3D;
+    transformControls?: TransformControls;
   }
 
   const customLayerWith3DModels: CustomLayerWith3DModels = {
@@ -89,7 +90,7 @@ async function modelsTerrain() {
     renderingMode: "3d",
 
     raycaster: new THREE.Raycaster(),
-    camera: new THREE.Camera(),
+    camera: new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000),
     scene: new THREE.Scene(),
     loadedModels: [],
 
@@ -111,6 +112,11 @@ async function modelsTerrain() {
       this.loadedModels = await Promise.all(modelsList.map(loadModel));
       this.loadedModels.forEach((model) => this.scene?.add(model));
 
+      // Transform controls
+      this.transformControls = new TransformControls(this.camera, map.getCanvas());
+      this.scene.add(this.transformControls.getHelper());
+
+      console.log("this.scene.children", this.scene.children);
       renderer.autoClear = false;
     },
 
@@ -137,10 +143,12 @@ async function modelsTerrain() {
         parent.scale.set(1.2, 1.2, 1.2);
 
         this.previousIntersectedObject = parent;
+        this.transformControls?.attach(this.previousIntersectedObject);
       } else if (this.previousIntersectedObject) {
         // Reset scale
         this.previousIntersectedObject.scale.set(1, 1, 1);
         this.previousIntersectedObject = undefined;
+        this.transformControls?.detach();
       }
     },
 
@@ -166,6 +174,12 @@ async function modelsTerrain() {
         );
 
       this.camera.projectionMatrix = m.multiply(l);
+
+      if (this.transformControls) {
+        this.transformControls.camera.projectionMatrix.copy(this.camera.projectionMatrix);
+        this.transformControls.update(0);
+      }
+
       renderer?.resetState();
       renderer?.render(this.scene, this.camera);
       map.triggerRepaint();
