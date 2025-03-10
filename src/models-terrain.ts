@@ -20,7 +20,7 @@ const map = new maplibregl.Map({
 });
 
 // orthographic view (the lower the better)
-// map.setVerticalFieldOfView(1.1);
+map.setVerticalFieldOfView(1.1);
 
 const renderer = new THREE.WebGLRenderer({
   canvas: map.getCanvas(),
@@ -28,8 +28,9 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
 });
 
+const loader = new GLTFLoader();
+
 async function loadModel(model: ModelDefinition) {
-  const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(model.path);
   const loadedModel = gltf.scene;
 
@@ -45,8 +46,20 @@ async function loadModel(model: ModelDefinition) {
   // position model
   loadedModel.position.set(dEastMeter, 0, dNorthMeter);
   loadedModel.rotateY(model.rotation);
+  loadedModel.name = model.id;
 
   return loadedModel;
+}
+
+function getParentGroup(object: THREE.Object3D): THREE.Object3D {
+  if (object.parent) {
+    if (object.parent.type === "Scene") {
+      return object;
+    } else {
+      return getParentGroup(object.parent);
+    }
+  }
+  return object;
 }
 
 async function modelsTerrain() {
@@ -66,6 +79,8 @@ async function modelsTerrain() {
     scene: THREE.Scene;
     raycaster: THREE.Raycaster;
     raycast: (point: { x: number; y: number }) => void;
+    loadedModels: THREE.Object3D[];
+    previousIntersectedObject?: THREE.Object3D;
   }
 
   const customLayerWith3DModels: CustomLayerWith3DModels = {
@@ -76,6 +91,7 @@ async function modelsTerrain() {
     raycaster: new THREE.Raycaster(),
     camera: new THREE.Camera(),
     scene: new THREE.Scene(),
+    loadedModels: [],
 
     async onAdd(map, gl) {
       // In threejs, y points up
@@ -92,8 +108,8 @@ async function modelsTerrain() {
       this.scene.add(light);
 
       // load and position models
-      const loadedModels = await Promise.all(modelsList.map(loadModel));
-      loadedModels.forEach((model) => this.scene?.add(model));
+      this.loadedModels = await Promise.all(modelsList.map(loadModel));
+      this.loadedModels.forEach((model) => this.scene?.add(model));
 
       renderer.autoClear = false;
     },
@@ -112,8 +128,20 @@ async function modelsTerrain() {
       this.raycaster.set(cameraPosition, viewDirection);
 
       // calculate objects intersecting the picking ray
-      var intersects = this.raycaster.intersectObjects(this.scene.children, true);
-      intersects.length && console.log("intersects", intersects);
+      var intersects = this.raycaster.intersectObjects(this.loadedModels, true);
+      if (intersects.length) {
+        const intersectedObject = intersects[0].object as THREE.Mesh;
+        const parent = getParentGroup(intersectedObject);
+
+        // bigger
+        parent.scale.set(1.2, 1.2, 1.2);
+
+        this.previousIntersectedObject = parent;
+      } else if (this.previousIntersectedObject) {
+        // Reset scale
+        this.previousIntersectedObject.scale.set(1, 1, 1);
+        this.previousIntersectedObject = undefined;
+      }
     },
 
     render(gl, args) {
