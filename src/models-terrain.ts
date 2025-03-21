@@ -262,8 +262,9 @@ async function modelsTerrain() {
 
       const cursorLatLng = JSON.stringify(
         {
-          position: selectedObject.position,
-          rotation: selectedObject.rotation,
+          rotation: {
+            y: selectedObject.rotation.y,
+          },
           geoCoordinates: {
             lng: geoCoords.lng,
             lat: geoCoords.lat,

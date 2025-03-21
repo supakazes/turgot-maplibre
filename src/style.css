@@ -63,7 +63,15 @@ h1 {
   font-size: 12px;
   text-align: left;
   color: #222;
-  background: #fff;
+  background: #ffffff3c;
+  pointer-events: none;
+}
+#toolbar-content {
+  pointer-events: all; /* Allow text to be selected */
+}
+#toolbar-content *::selection {
+  background-color: #ff0000;
+  color: #fff;
 }
 
 /* Button */
