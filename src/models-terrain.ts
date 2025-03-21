@@ -19,8 +19,9 @@ const map = new maplibregl.Map({
   style: `https://api.maptiler.com/maps/voyager/style.json?key=${MAPTILER_KEY}`,
 });
 
+let transformControls: TransformControls | undefined = undefined;
 // orthographic view (the lower the better)
-map.setVerticalFieldOfView(1.1);
+// map.setVerticalFieldOfView(1.1);
 
 const renderer = new THREE.WebGLRenderer({
   canvas: map.getCanvas(),
@@ -81,14 +82,12 @@ async function modelsTerrain() {
     raycast: (point: { x: number; y: number }) => void;
     loadedModels: THREE.Object3D[];
     previousIntersectedObject?: THREE.Object3D;
-    transformControls?: TransformControls;
   }
 
   const customLayerWith3DModels: CustomLayerWith3DModels = {
     id: "3d-models",
     type: "custom",
     renderingMode: "3d",
-
     raycaster: new THREE.Raycaster(),
     camera: new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000),
     scene: new THREE.Scene(),
@@ -96,10 +95,10 @@ async function modelsTerrain() {
 
     async onAdd(map, gl) {
       // In threejs, y points up
-      this.scene.rotateX(Math.PI / 2);
+      // this.scene.rotateX(Math.PI / 2);
 
       // In threejs, z points toward the viewer - mirroring it such that z points along maplibre's north.
-      this.scene.scale.multiply(new THREE.Vector3(1, 1, -1));
+      // this.scene.scale.multiply(new THREE.Vector3(1, 1, -1));
 
       // We now have a scene with (x=east, y=up, z=north)
 
@@ -113,10 +112,21 @@ async function modelsTerrain() {
       this.loadedModels.forEach((model) => this.scene?.add(model));
 
       // Transform controls
-      this.transformControls = new TransformControls(this.camera, map.getCanvas());
-      this.scene.add(this.transformControls.getHelper());
+      transformControls = new TransformControls(this.camera, map.getCanvas());
+      transformControls.addEventListener("change", () => {
+        renderer.render(this.scene, this.camera);
+      });
+      // map.dragPan.enable(false);
 
-      console.log("this.scene.children", this.scene.children);
+      transformControls.addEventListener("dragging-changed", function (event) {
+        console.log("dragging-changed", event);
+      });
+      this.scene.add(transformControls.getHelper());
+
+      transformControls.addEventListener("objectChange", function () {
+        console.log("objectChange");
+      });
+
       renderer.autoClear = false;
     },
 
@@ -135,6 +145,7 @@ async function modelsTerrain() {
 
       // calculate objects intersecting the picking ray
       var intersects = this.raycaster.intersectObjects(this.loadedModels, true);
+
       if (intersects.length) {
         const intersectedObject = intersects[0].object as THREE.Mesh;
         const parent = getParentGroup(intersectedObject);
@@ -142,13 +153,12 @@ async function modelsTerrain() {
         // bigger
         parent.scale.set(1.2, 1.2, 1.2);
 
+        transformControls?.attach(intersectedObject);
         this.previousIntersectedObject = parent;
-        this.transformControls?.attach(this.previousIntersectedObject);
       } else if (this.previousIntersectedObject) {
         // Reset scale
         this.previousIntersectedObject.scale.set(1, 1, 1);
         this.previousIntersectedObject = undefined;
-        this.transformControls?.detach();
       }
     },
 
@@ -174,11 +184,6 @@ async function modelsTerrain() {
         );
 
       this.camera.projectionMatrix = m.multiply(l);
-
-      if (this.transformControls) {
-        this.transformControls.camera.projectionMatrix.copy(this.camera.projectionMatrix);
-        this.transformControls.update(0);
-      }
 
       renderer?.resetState();
       renderer?.render(this.scene, this.camera);
@@ -206,6 +211,8 @@ async function modelsTerrain() {
     const cursorLatLng = e.lngLat.wrap();
     console.log("click", cursorLatLng);
     navigator.clipboard.writeText(JSON.stringify(cursorLatLng));
+
+    transformControls?.detach();
   });
 }
 
