@@ -9,6 +9,36 @@ const sceneOrigin = new maplibregl.LngLat(2.370572296723708, 48.884197153165246)
 let hoveredObject: THREE.Object3D | undefined | null;
 let selectedObject: THREE.Object3D | undefined | null;
 
+function getObjectLatLng(object: THREE.Object3D): maplibregl.LngLat {
+  if (!object) return new maplibregl.LngLat(0, 0);
+
+  // Get ThreeJS world position (x=east, z=north)
+  const position = object.position;
+
+  // Get scene origin in mercator coordinates
+  const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(sceneOrigin);
+
+  // Calculate mercator offsets from meters
+  // This is the reverse of the calculation in loadModel
+  const mercatorPerMeter = sceneOriginMercator.meterInMercatorCoordinateUnits();
+  const offsetMercatorX = position.x * mercatorPerMeter;
+  const offsetMercatorZ = position.z * mercatorPerMeter;
+
+  // Create new mercator coordinate by adding the offsets
+  const objectMercator = {
+    x: sceneOriginMercator.x + offsetMercatorX,
+    y: sceneOriginMercator.y - offsetMercatorZ, // Negate Z since north is negative in mercator Y
+    z: sceneOriginMercator.z,
+  };
+
+  // Convert back to LngLat
+  return new maplibregl.MercatorCoordinate(
+    objectMercator.x,
+    objectMercator.y,
+    objectMercator.z
+  ).toLngLat();
+}
+
 const map = new maplibregl.Map({
   container: "map",
   center: sceneOrigin,
@@ -194,22 +224,8 @@ async function modelsTerrain() {
   });
 
   document.addEventListener("keydown", (e) => {
+    // prevent map navigation
     map.stop();
-    console.log("selectedObject position", selectedObject?.position);
-    console.log("selectedObject rotation", selectedObject?.rotation);
-
-    const selectedObjectElement = document.getElementById("selected-object");
-    if (selectedObjectElement) {
-      const cursorLatLng = JSON.stringify(
-        {
-          position: selectedObject?.position,
-          rotation: selectedObject?.rotation,
-        },
-        null,
-        2
-      );
-      selectedObjectElement.innerHTML = `${cursorLatLng}`;
-    }
 
     switch (e.key) {
       case "ArrowUp":
@@ -232,11 +248,31 @@ async function modelsTerrain() {
           selectedObject?.translateX(1);
         }
         break;
+      case "Escape":
+        selectedObject = null;
+        break;
       default:
         break;
     }
-    if (e.key === "Escape") {
-      selectedObject = null;
+
+    // show selected object infos
+    const selectedObjectElement = document.getElementById("selected-object");
+    if (selectedObject && selectedObjectElement) {
+      const geoCoords = getObjectLatLng(selectedObject);
+
+      const cursorLatLng = JSON.stringify(
+        {
+          position: selectedObject.position,
+          rotation: selectedObject.rotation,
+          geoCoordinates: {
+            lng: geoCoords.lng,
+            lat: geoCoords.lat,
+          },
+        },
+        null,
+        2
+      );
+      selectedObjectElement.innerHTML = `${cursorLatLng}`;
     }
   });
 
