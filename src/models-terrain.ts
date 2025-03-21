@@ -1,12 +1,13 @@
 import maplibregl from "maplibre-gl";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { MAPTILER_KEY } from "src/constants";
 import { ModelDefinition, modelsList } from "src/models-list";
 import { calculateDistanceMercatorToMeters } from "src/utils/calculateDistanceMercatorToMeters";
 
 const sceneOrigin = new maplibregl.LngLat(2.370572296723708, 48.884197153165246);
+let hoveredObject: THREE.Object3D | undefined | null;
+let selectedObject: THREE.Object3D | undefined | null;
 
 const map = new maplibregl.Map({
   container: "map",
@@ -132,12 +133,14 @@ async function modelsTerrain() {
       if (intersects.length) {
         const intersectedObject = intersects[0].object as THREE.Mesh;
         const parent = getParentGroup(intersectedObject);
+        hoveredObject = parent;
 
         // bigger
         parent.scale.set(1.2, 1.2, 1.2);
 
         this.previousIntersectedObject = parent;
       } else if (this.previousIntersectedObject) {
+        hoveredObject = null;
         // Reset scale
         this.previousIntersectedObject.scale.set(1, 1, 1);
         this.previousIntersectedObject = undefined;
@@ -180,17 +183,73 @@ async function modelsTerrain() {
     // raycast
     customLayerWith3DModels.raycast(e.point);
 
+    console.log("selectedObject", selectedObject?.name);
+
     // show coordinates
     const coordinatesElement = document.getElementById("coordinates");
     if (coordinatesElement) {
-      const cursorLatLng = JSON.stringify(e.lngLat.wrap());
+      const cursorLatLng = JSON.stringify(e.lngLat.wrap(), null, 2);
       coordinatesElement.innerHTML = `${cursorLatLng}`;
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    map.stop();
+    console.log("selectedObject position", selectedObject?.position);
+    console.log("selectedObject rotation", selectedObject?.rotation);
+
+    const selectedObjectElement = document.getElementById("selected-object");
+    if (selectedObjectElement) {
+      const cursorLatLng = JSON.stringify(
+        {
+          position: selectedObject?.position,
+          rotation: selectedObject?.rotation,
+        },
+        null,
+        2
+      );
+      selectedObjectElement.innerHTML = `${cursorLatLng}`;
+    }
+
+    switch (e.key) {
+      case "ArrowUp":
+        selectedObject?.translateZ(-1);
+        break;
+      case "ArrowDown":
+        selectedObject?.translateZ(1);
+        break;
+      case "ArrowLeft":
+        if (e.shiftKey) {
+          selectedObject?.rotateY(0.1);
+        } else {
+          selectedObject?.translateX(-1);
+        }
+        break;
+      case "ArrowRight":
+        if (e.shiftKey) {
+          selectedObject?.rotateY(-0.1);
+        } else {
+          selectedObject?.translateX(1);
+        }
+        break;
+      default:
+        break;
+    }
+    if (e.key === "Escape") {
+      selectedObject = null;
     }
   });
 
   map.on("click", (e) => {
     const cursorLatLng = e.lngLat.wrap();
     console.log("click", cursorLatLng);
+
+    if (hoveredObject) {
+      selectedObject = hoveredObject;
+    } else {
+      selectedObject = null;
+    }
+    console.log("currentObject", hoveredObject?.name);
     navigator.clipboard.writeText(JSON.stringify(cursorLatLng));
   });
 }
