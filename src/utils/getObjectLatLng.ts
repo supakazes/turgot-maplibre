@@ -2,7 +2,7 @@ import * as THREE from "three";
 import maplibregl from "maplibre-gl";
 import { SCENE_ORIGIN } from "src/constants";
 
-export default function getObjectLatLng(object: THREE.Object3D): maplibregl.LngLat {
+export default function getObjectLatLng(object: THREE.Object3D | null): maplibregl.LngLat {
   if (!object) return new maplibregl.LngLat(0, 0);
 
   // Get ThreeJS world position (x=east, z=north)

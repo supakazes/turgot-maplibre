@@ -1,14 +1,14 @@
 import maplibregl from "maplibre-gl";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+
 import { MAPTILER_KEY, SCENE_ORIGIN } from "src/constants";
-import { ModelDefinition, modelsList } from "src/models-list";
-import { calculateDistanceMercatorToMeters } from "src/utils/calculateDistanceMercatorToMeters";
-import getObjectLatLng from "src/utils/getObjectLatLng";
+import { modelsList } from "src/models-list";
+import moveObjectWithKeys from "src/utils/moveObjectWithKeys";
+import getParentGroup from "src/utils/getParentGroup";
+import loadModel from "src/utils/loadModel";
 
 let hoveredObject: THREE.Object3D | undefined | null;
 let selectedObject: THREE.Object3D | undefined | null;
-const loader = new GLTFLoader();
 
 const map = new maplibregl.Map({
   container: "map",
@@ -21,58 +21,26 @@ const map = new maplibregl.Map({
   style: `https://api.maptiler.com/maps/voyager/style.json?key=${MAPTILER_KEY}`,
 });
 
-// orthographic view (the lower the better)
+// default: 36.87
+// orthographic: 1.1
 map.setVerticalFieldOfView(1.1);
 
-const renderer = new THREE.WebGLRenderer({
+const threeRenderer = new THREE.WebGLRenderer({
   canvas: map.getCanvas(),
   context: map.getCanvas().getContext("webgl2") as WebGLRenderingContext,
   antialias: true,
 });
 
-async function loadModel(model: ModelDefinition) {
-  const gltf = await loader.loadAsync(model.path);
-  const loadedModel = gltf.scene;
-
-  // Getting model x and y (in meters) relative to scene origin.
-  const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(SCENE_ORIGIN);
-  const modelLocation = new maplibregl.LngLat(model.origin.lng, model.origin.lat);
-  const modelMercator = maplibregl.MercatorCoordinate.fromLngLat(modelLocation);
-  const { dEastMeter, dNorthMeter } = calculateDistanceMercatorToMeters(
-    sceneOriginMercator,
-    modelMercator
-  );
-
-  // position model
-  loadedModel.position.set(dEastMeter, 0, dNorthMeter);
-  loadedModel.rotateY(model.rotation);
-  loadedModel.name = model.id;
-
-  return loadedModel;
-}
-
-function getParentGroup(object: THREE.Object3D): THREE.Object3D {
-  if (object.parent) {
-    if (object.parent.type === "Scene") {
-      return object;
-    } else {
-      return getParentGroup(object.parent);
-    }
-  }
-  return object;
-}
+map.addControl(
+  new maplibregl.NavigationControl({
+    visualizePitch: true,
+    visualizeRoll: true,
+    showZoom: true,
+    showCompass: true,
+  })
+);
 
 async function modelsTerrain() {
-  // Add zoom and rotation controls to the map.
-  map.addControl(
-    new maplibregl.NavigationControl({
-      visualizePitch: true,
-      visualizeRoll: true,
-      showZoom: true,
-      showCompass: true,
-    })
-  );
-
   // Custom layer for a 3D model, implementing `CustomLayerInterface`
   interface CustomLayerWith3DModels extends maplibregl.CustomLayerInterface {
     camera: THREE.Camera;
@@ -83,6 +51,9 @@ async function modelsTerrain() {
     previousIntersectedObject?: THREE.Object3D;
   }
 
+  /**
+   * 3D Layer
+   */
   const customLayerWith3DModels: CustomLayerWith3DModels = {
     id: "3d-models",
     type: "custom",
@@ -111,9 +82,12 @@ async function modelsTerrain() {
       this.loadedModels = await Promise.all(modelsList.map(loadModel));
       this.loadedModels.forEach((model) => this.scene?.add(model));
 
-      renderer.autoClear = false;
+      threeRenderer.autoClear = false;
     },
 
+    /**
+     * raycast
+     */
     raycast({ x, y }) {
       const { width, height } = map.transform;
       const camInverseProjection = this.camera.projectionMatrix.clone().invert();
@@ -146,6 +120,9 @@ async function modelsTerrain() {
       }
     },
 
+    /**
+     * render
+     */
     render(gl, args) {
       const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(SCENE_ORIGIN, 0);
 
@@ -168,12 +145,15 @@ async function modelsTerrain() {
         );
 
       this.camera.projectionMatrix = m.multiply(l);
-      renderer?.resetState();
-      renderer?.render(this.scene, this.camera);
+      threeRenderer?.resetState();
+      threeRenderer?.render(this.scene, this.camera);
       map.triggerRepaint();
     },
   };
 
+  /**
+   * Event listeners
+   */
   map.on("load", () => {
     map.addLayer(customLayerWith3DModels);
   });
@@ -192,58 +172,8 @@ async function modelsTerrain() {
     }
   });
 
-  document.addEventListener("keydown", (e) => {
-    // prevent map navigation
-    map.stop();
-
-    switch (e.key) {
-      case "ArrowUp":
-        selectedObject?.translateZ(-1);
-        break;
-      case "ArrowDown":
-        selectedObject?.translateZ(1);
-        break;
-      case "ArrowLeft":
-        if (e.shiftKey) {
-          selectedObject?.rotateY(0.1);
-        } else {
-          selectedObject?.translateX(-1);
-        }
-        break;
-      case "ArrowRight":
-        if (e.shiftKey) {
-          selectedObject?.rotateY(-0.1);
-        } else {
-          selectedObject?.translateX(1);
-        }
-        break;
-      case "Escape":
-        selectedObject = null;
-        break;
-      default:
-        break;
-    }
-
-    // show selected object infos
-    const selectedObjectElement = document.getElementById("selected-object");
-    if (selectedObject && selectedObjectElement) {
-      const geoCoords = getObjectLatLng(selectedObject);
-
-      const cursorLatLng = JSON.stringify(
-        {
-          rotation: {
-            y: selectedObject.rotation.y,
-          },
-          geoCoordinates: {
-            lng: geoCoords.lng,
-            lat: geoCoords.lat,
-          },
-        },
-        null,
-        2
-      );
-      selectedObjectElement.innerHTML = `${cursorLatLng}`;
-    }
+  map.getCanvas().addEventListener("keydown", (e) => {
+    moveObjectWithKeys(e, selectedObject, map);
   });
 
   map.on("click", (e) => {
