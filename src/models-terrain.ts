@@ -1,47 +1,18 @@
 import maplibregl from "maplibre-gl";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { MAPTILER_KEY } from "src/constants";
+import { MAPTILER_KEY, SCENE_ORIGIN } from "src/constants";
 import { ModelDefinition, modelsList } from "src/models-list";
 import { calculateDistanceMercatorToMeters } from "src/utils/calculateDistanceMercatorToMeters";
+import getObjectLatLng from "src/utils/getObjectLatLng";
 
-const sceneOrigin = new maplibregl.LngLat(2.370572296723708, 48.884197153165246);
 let hoveredObject: THREE.Object3D | undefined | null;
 let selectedObject: THREE.Object3D | undefined | null;
-
-function getObjectLatLng(object: THREE.Object3D): maplibregl.LngLat {
-  if (!object) return new maplibregl.LngLat(0, 0);
-
-  // Get ThreeJS world position (x=east, z=north)
-  const position = object.position;
-
-  // Get scene origin in mercator coordinates
-  const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(sceneOrigin);
-
-  // Calculate mercator offsets from meters
-  // This is the reverse of the calculation in loadModel
-  const mercatorPerMeter = sceneOriginMercator.meterInMercatorCoordinateUnits();
-  const offsetMercatorX = position.x * mercatorPerMeter;
-  const offsetMercatorZ = position.z * mercatorPerMeter;
-
-  // Create new mercator coordinate by adding the offsets
-  const objectMercator = {
-    x: sceneOriginMercator.x + offsetMercatorX,
-    y: sceneOriginMercator.y - offsetMercatorZ, // Negate Z since north is negative in mercator Y
-    z: sceneOriginMercator.z,
-  };
-
-  // Convert back to LngLat
-  return new maplibregl.MercatorCoordinate(
-    objectMercator.x,
-    objectMercator.y,
-    objectMercator.z
-  ).toLngLat();
-}
+const loader = new GLTFLoader();
 
 const map = new maplibregl.Map({
   container: "map",
-  center: sceneOrigin,
+  center: SCENE_ORIGIN,
   zoom: 17,
   pitch: 45,
   maxPitch: 80, // default 60
@@ -59,14 +30,12 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
 });
 
-const loader = new GLTFLoader();
-
 async function loadModel(model: ModelDefinition) {
   const gltf = await loader.loadAsync(model.path);
   const loadedModel = gltf.scene;
 
   // Getting model x and y (in meters) relative to scene origin.
-  const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(sceneOrigin);
+  const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(SCENE_ORIGIN);
   const modelLocation = new maplibregl.LngLat(model.origin.lng, model.origin.lat);
   const modelMercator = maplibregl.MercatorCoordinate.fromLngLat(modelLocation);
   const { dEastMeter, dNorthMeter } = calculateDistanceMercatorToMeters(
@@ -178,7 +147,7 @@ async function modelsTerrain() {
     },
 
     render(gl, args) {
-      const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(sceneOrigin, 0);
+      const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(SCENE_ORIGIN, 0);
 
       const sceneTransform = {
         translateX: sceneOriginMercator.x,
