@@ -1,7 +1,7 @@
 import maplibregl from "maplibre-gl";
 import * as THREE from "three";
 
-import { MAPTILER_KEY, SCENE_ORIGIN } from "src/constants";
+import { TURGOT_MAP_OVERVIEW_COORDINATES, MAPTILER_KEY, SCENE_ORIGIN } from "src/constants";
 import { modelsList } from "src/models-list";
 import moveObjectWithKeys from "src/utils/moveObjectWithKeys";
 import getParentGroup from "src/utils/getParentGroup";
@@ -9,13 +9,6 @@ import loadModel from "src/utils/loadModel";
 
 let hoveredObject: THREE.Object3D | undefined | null;
 let selectedObject: THREE.Object3D | undefined | null;
-
-let imageCoordinates = [
-  [2.3989055128284917, 48.84931444633858],
-  [2.3439996398441565, 48.82166385552824],
-  [2.295201968782578, 48.864052878215034],
-  [2.3511927242244326, 48.89150953232166],
-];
 
 const map = new maplibregl.Map({
   container: "map",
@@ -165,13 +158,8 @@ async function modelsTerrain() {
 
     map.addSource("overlay-source", {
       type: "image",
-      url: "https://upload.wikimedia.org/wikipedia/commons/d/dc/Turgot_map_Paris_KU_general_map.jpg",
-      coordinates: imageCoordinates as [
-        [number, number],
-        [number, number],
-        [number, number],
-        [number, number]
-      ],
+      url: "/src/images/Turgot_map_Paris_KU_general_map.jpg",
+      coordinates: TURGOT_MAP_OVERVIEW_COORDINATES,
     });
 
     map.addLayer({
