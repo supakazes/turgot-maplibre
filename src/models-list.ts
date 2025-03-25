@@ -9,19 +9,19 @@ export const modelsList: ModelDefinition[] = [
   {
     id: "house-1",
     path: "/src/models/house/house.glb",
-    origin: { lng: 2.369540152077093, lat: 48.8834462031036 },
+    origin: { lng: 2.359989916741256, lat: 48.851052162943716 },
     rotation: 0.9,
   },
   {
     id: "house-2",
     path: "/src/models/house/house.glb",
-    origin: { lng: 2.3686339204380147, lat: 48.88446609167394 },
+    origin: { lng: 2.362784417090552, lat: 48.85142690508661 },
     rotation: 0.5,
   },
   {
     id: "house-3",
     path: "/src/models/house/house.glb",
-    origin: { lng: 2.371983100211537, lat: 48.88527557732877 },
+    origin: { lng: 2.360932797829946, lat: 48.85244828197375 },
     rotation: 0.5,
   },
 ];

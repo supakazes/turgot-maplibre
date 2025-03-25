@@ -10,19 +10,25 @@ import loadModel from "src/utils/loadModel";
 let hoveredObject: THREE.Object3D | undefined | null;
 let selectedObject: THREE.Object3D | undefined | null;
 
+let imageCoordinates = [
+  [2.3989055128284917, 48.84931444633858],
+  [2.3439996398441565, 48.82166385552824],
+  [2.295201968782578, 48.864052878215034],
+  [2.3511927242244326, 48.89150953232166],
+];
+
 const map = new maplibregl.Map({
   container: "map",
   center: SCENE_ORIGIN,
   zoom: 17,
   pitch: 45,
   maxPitch: 80, // default 60
-  bearing: -17.6, // rotation
+  bearing: 142.69415138998863, // rotation
   canvasContextAttributes: { antialias: true },
   style: `https://api.maptiler.com/maps/voyager/style.json?key=${MAPTILER_KEY}`,
 });
 
-// default: 36.87
-// orthographic: 1.1
+// default: 36.87 || orthographic: 1.1
 map.setVerticalFieldOfView(1.1);
 
 const threeRenderer = new THREE.WebGLRenderer({
@@ -156,6 +162,30 @@ async function modelsTerrain() {
    */
   map.on("load", () => {
     map.addLayer(customLayerWith3DModels);
+
+    map.addSource("overlay-source", {
+      type: "image",
+      url: "https://upload.wikimedia.org/wikipedia/commons/d/dc/Turgot_map_Paris_KU_general_map.jpg",
+      coordinates: imageCoordinates as [
+        [number, number],
+        [number, number],
+        [number, number],
+        [number, number]
+      ],
+    });
+
+    map.addLayer({
+      id: "overlay-layer",
+      type: "raster",
+      source: "overlay-source",
+      paint: {
+        "raster-opacity": 0.3,
+      },
+    });
+  });
+
+  map.on("dragend", () => {
+    console.log("bearing", map.getBearing());
   });
 
   map.on("mousemove", (e) => {
