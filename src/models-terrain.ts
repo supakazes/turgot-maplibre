@@ -1,5 +1,6 @@
 import maplibregl from "maplibre-gl";
 import * as THREE from "three";
+import turgotMapOverviewImage from "src/images/Turgot_map_Paris_KU_general_map.jpg";
 
 import { TURGOT_MAP_OVERVIEW_COORDINATES, MAPTILER_KEY, SCENE_ORIGIN } from "src/constants";
 import { modelsList } from "src/models-list";
@@ -158,7 +159,7 @@ async function modelsTerrain() {
 
     map.addSource("overlay-source", {
       type: "image",
-      url: "./src/images/Turgot_map_Paris_KU_general_map.jpg",
+      url: turgotMapOverviewImage,
       coordinates: TURGOT_MAP_OVERVIEW_COORDINATES,
     });
 
