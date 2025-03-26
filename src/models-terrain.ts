@@ -158,7 +158,7 @@ async function modelsTerrain() {
 
     map.addSource("overlay-source", {
       type: "image",
-      url: "/src/images/Turgot_map_Paris_KU_general_map.jpg",
+      url: "src/images/Turgot_map_Paris_KU_general_map.jpg",
       coordinates: TURGOT_MAP_OVERVIEW_COORDINATES,
     });
 
