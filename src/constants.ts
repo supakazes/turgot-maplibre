@@ -1,13 +1,2 @@
 export const MAPTILER_KEY = "Lr1q5wml4SB6TlSXbQrJ";
-export const SCENE_ORIGIN = { lng: 2.360444120820034, lat: 48.851535541639635 };
-export const TURGOT_MAP_OVERVIEW_COORDINATES: [
-  [number, number],
-  [number, number],
-  [number, number],
-  [number, number]
-] = [
-  [2.3989055128284917, 48.84931444633858],
-  [2.3439996398441565, 48.82166385552824],
-  [2.295201968782578, 48.864052878215034],
-  [2.3511927242244326, 48.89150953232166],
-];
+export const SCENE_ORIGIN = { lng: 2.311149109085136, lat: 48.86299470389389 };

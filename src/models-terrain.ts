@@ -1,12 +1,15 @@
 import maplibregl from "maplibre-gl";
+import * as dat from "dat.gui";
 import * as THREE from "three";
-import turgotMapOverviewImage from "src/images/Turgot_map_Paris_KU_general_map.jpg";
 
-import { TURGOT_MAP_OVERVIEW_COORDINATES, MAPTILER_KEY, SCENE_ORIGIN } from "src/constants";
+import { MAPTILER_KEY, SCENE_ORIGIN } from "src/constants";
 import { modelsList } from "src/models-list";
 import moveObjectWithKeys from "src/utils/moveObjectWithKeys";
 import getParentGroup from "src/utils/getParentGroup";
 import loadModel from "src/utils/loadModel";
+import { sourceMapSheets, sourceMapOverview, MapSource } from "src/mapRasterSources";
+import guiMapLayersOpacity from "src/utils/guiMapLayersOpacity";
+import addSourceAndLayer from "src/utils/addSourceAndLayer";
 
 let hoveredObject: THREE.Object3D | undefined | null;
 let selectedObject: THREE.Object3D | undefined | null;
@@ -24,6 +27,7 @@ const map = new maplibregl.Map({
 
 // default: 36.87 || orthographic: 1.1
 map.setVerticalFieldOfView(1.1);
+const gui = new dat.GUI({ width: 300 });
 
 const threeRenderer = new THREE.WebGLRenderer({
   canvas: map.getCanvas(),
@@ -152,31 +156,32 @@ async function modelsTerrain() {
   };
 
   /**
-   * Event listeners
+   * Map events
    */
   map.on("load", () => {
+    // map overview layer
+    addSourceAndLayer(map, sourceMapOverview);
+
+    // map sheets layers
+    sourceMapSheets.forEach((source) => addSourceAndLayer(map, source));
+
+    // 3D layer
     map.addLayer(customLayerWith3DModels);
 
-    map.addSource("overlay-source", {
-      type: "image",
-      url: turgotMapOverviewImage,
-      coordinates: TURGOT_MAP_OVERVIEW_COORDINATES,
-    });
-
-    map.addLayer({
-      id: "overlay-layer",
-      type: "raster",
-      source: "overlay-source",
-      paint: {
-        "raster-opacity": 0.3,
-      },
-    });
+    // gui
+    guiMapLayersOpacity(gui, map);
   });
 
+  /**
+   * Map dragend
+   */
   map.on("dragend", () => {
     console.log("bearing", map.getBearing());
   });
 
+  /**
+   * Map mousemove
+   */
   map.on("mousemove", (e) => {
     // raycast
     customLayerWith3DModels.raycast(e.point);
@@ -191,10 +196,16 @@ async function modelsTerrain() {
     }
   });
 
+  /**
+   * Map keydown
+   */
   map.getCanvas().addEventListener("keydown", (e) => {
     moveObjectWithKeys(e, selectedObject, map);
   });
 
+  /**
+   * Map click
+   */
   map.on("click", (e) => {
     const cursorLatLng = e.lngLat.wrap();
     console.log("click", cursorLatLng);
@@ -205,7 +216,7 @@ async function modelsTerrain() {
       selectedObject = null;
     }
     console.log("currentObject", hoveredObject?.name);
-    navigator.clipboard.writeText(JSON.stringify(cursorLatLng));
+    navigator.clipboard.writeText(JSON.stringify([cursorLatLng.lng, cursorLatLng.lat]));
   });
 }
 
