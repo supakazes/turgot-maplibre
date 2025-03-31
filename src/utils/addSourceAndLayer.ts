@@ -1,4 +1,5 @@
 import { MapSource } from "src/mapRasterSources";
+import { SHEET_LAYER } from "src/utils/guiMapLayersOpacity";
 
 const addSourceAndLayer = (map: maplibregl.Map, source: MapSource) => {
   map.addSource(source.id, {
@@ -12,7 +13,7 @@ const addSourceAndLayer = (map: maplibregl.Map, source: MapSource) => {
     type: "raster",
     source: source.id,
     paint: {
-      "raster-opacity": 0.5,
+      "raster-opacity": SHEET_LAYER.opacity,
     },
   });
 };
