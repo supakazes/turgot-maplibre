@@ -17,7 +17,7 @@ let selectedObject: THREE.Object3D | undefined | null;
 const map = new maplibregl.Map({
   container: "map",
   center: SCENE_ORIGIN,
-  zoom: 17,
+  zoom: 13.5,
   pitch: 45,
   maxPitch: 80, // default 60
   bearing: 142.69415138998863, // rotation
