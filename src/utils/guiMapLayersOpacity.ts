@@ -1,3 +1,5 @@
+import { sourceMapSheets } from "src/mapRasterSources";
+
 function guiMapLayersOpacity(gui: dat.GUI, map: maplibregl.Map) {
   const layer = {
     opacity: 0,
@@ -16,8 +18,9 @@ function guiMapLayersOpacity(gui: dat.GUI, map: maplibregl.Map) {
     .add(layer, "opacity", 0, 1, 0.01)
     .name("Map Sheets")
     .onChange((value) => {
-      map.setPaintProperty("map-sheet-16", "raster-opacity", value);
-      map.setPaintProperty("map-sheet-20", "raster-opacity", value);
+      sourceMapSheets.forEach((source) => {
+        map.setPaintProperty(source.id, "raster-opacity", value);
+      });
     });
 
   opacityFolder.open();
