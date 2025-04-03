@@ -7,7 +7,7 @@ import { modelsList } from "src/models-list";
 import moveObjectWithKeys from "src/utils/moveObjectWithKeys";
 import getParentGroup from "src/utils/getParentGroup";
 import loadModel from "src/utils/loadModel";
-import { sourceMapSheets, sourceMapOverview, MapSource } from "src/mapRasterSources";
+import { sourceMapSheets } from "src/mapRasterSources";
 import guiMapLayersOpacity from "src/utils/guiMapLayersOpacity";
 import addSourceAndLayer from "src/utils/addSourceAndLayer";
 
@@ -22,7 +22,15 @@ const map = new maplibregl.Map({
   maxPitch: 80, // default 60
   bearing: 142.69415138998863, // rotation
   canvasContextAttributes: { antialias: true },
-  style: `https://api.maptiler.com/maps/voyager/style.json?key=${MAPTILER_KEY}`,
+  /**
+   * styles:
+   * backdrop-light: black and white
+   * basic-v2-light: gray and white
+   * voyager: pastel
+   * toner-v2-lite
+   * dataviz-light
+   * */
+  style: `https://api.maptiler.com/maps/toner-v2-lite/style.json?key=${MAPTILER_KEY}`,
 });
 
 // default: 36.87 || orthographic: 1.1
@@ -160,7 +168,7 @@ async function modelsTerrain() {
    */
   map.on("load", () => {
     // map overview layer
-    addSourceAndLayer(map, sourceMapOverview);
+    // addSourceAndLayer(map, sourceMapOverview);
 
     // map sheets layers
     sourceMapSheets.forEach((source) => addSourceAndLayer(map, source));
