@@ -7,12 +7,12 @@ export const SHEET_LAYER = {
 function guiMapLayersOpacity(gui: dat.GUI, map: maplibregl.Map) {
   const opacityFolder = gui.addFolder("Raster Layers Opacity");
 
-  opacityFolder
-    .add(SHEET_LAYER, "opacity", 0, 1, 0.01)
-    .name("Map Overview")
-    .onChange((value) => {
-      map.setPaintProperty("map-overview", "raster-opacity", value);
-    });
+  // opacityFolder
+  //   .add(SHEET_LAYER, "opacity", 0, 1, 0.01)
+  //   .name("Map Overview")
+  //   .onChange((value) => {
+  //     map.setPaintProperty("map-overview", "raster-opacity", value);
+  //   });
 
   opacityFolder
     .add(SHEET_LAYER, "opacity", 0, 1, 0.01)

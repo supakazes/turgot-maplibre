@@ -4,7 +4,10 @@
  * because a meter near the north-pole covers more mercator-units
  * than a meter near the equator.
  */
-export function calculateDistanceMercatorToMeters(from, to) {
+export function calculateDistanceMercatorToMeters(
+  from: maplibregl.MercatorCoordinate,
+  to: maplibregl.MercatorCoordinate
+) {
   const mercatorPerMeter = from.meterInMercatorCoordinateUnits();
   // mercator x: 0=west, 1=east
   const dEast = to.x - from.x;
