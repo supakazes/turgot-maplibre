@@ -25,14 +25,14 @@ const moveObjectWithKeys = (
         break;
       case "ArrowLeft":
         if (e.shiftKey) {
-          selectedObject?.rotateY(0.1);
+          selectedObject?.rotateY(0.01);
         } else {
           selectedObject?.translateX(-1);
         }
         break;
       case "ArrowRight":
         if (e.shiftKey) {
-          selectedObject?.rotateY(-0.1);
+          selectedObject?.rotateY(-0.01);
         } else {
           selectedObject?.translateX(1);
         }
