@@ -1,4 +1,6 @@
 import house from "src/models/house/house.glb";
+import pontDeLaTournelle from "src/models/pont-de-la-tournelle.glb";
+
 export interface ModelDefinition {
   id: string;
   path: string;
@@ -20,9 +22,12 @@ export const modelsList: ModelDefinition[] = [
     rotation: 0.5,
   },
   {
-    id: "house-3",
-    path: house,
-    origin: { lng: 2.360932797829946, lat: 48.85244828197375 },
-    rotation: 0.5,
+    id: "pont-de-la-tournelle",
+    path: pontDeLaTournelle,
+    origin: {
+      lng: 2.355499886584994,
+      lat: 48.85067371517877,
+    },
+    rotation: 1.5399999999999605,
   },
 ];
