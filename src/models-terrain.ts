@@ -52,11 +52,12 @@ map.addControl(
   })
 );
 
+const scene = new THREE.Scene();
+const camera = new THREE.Camera();
+
 async function modelsTerrain() {
   // Custom layer for a 3D model, implementing `CustomLayerInterface`
   interface CustomLayerWith3DModels extends maplibregl.CustomLayerInterface {
-    camera: THREE.Camera;
-    scene: THREE.Scene;
     raycaster: THREE.Raycaster;
     raycast: (point: { x: number; y: number }) => void;
     loadedModels: THREE.Object3D[];
@@ -72,27 +73,26 @@ async function modelsTerrain() {
     renderingMode: "3d",
 
     raycaster: new THREE.Raycaster(),
-    camera: new THREE.Camera(),
-    scene: new THREE.Scene(),
+
     loadedModels: [],
 
     async onAdd(map, gl) {
       // In threejs, y points up
-      this.scene.rotateX(Math.PI / 2);
+      scene.rotateX(Math.PI / 2);
 
       // In threejs, z points toward the viewer - mirroring it such that z points along maplibre's north.
-      this.scene.scale.multiply(new THREE.Vector3(1, 1, -1));
+      scene.scale.multiply(new THREE.Vector3(1, 1, -1));
 
       // We now have a scene with (x=east, y=up, z=north)
 
       // light coming from south-east.
       const light = new THREE.DirectionalLight(0xffffff);
       light.position.set(50, 70, -30).normalize();
-      this.scene.add(light);
+      scene.add(light);
 
       // load and position models
       this.loadedModels = await Promise.all(modelsList.map(loadModel));
-      this.loadedModels.forEach((model) => this.scene?.add(model));
+      this.loadedModels.forEach((model) => scene?.add(model));
 
       threeRenderer.autoClear = false;
     },
@@ -102,7 +102,7 @@ async function modelsTerrain() {
      */
     raycast({ x, y }) {
       const { width, height } = map.transform;
-      const camInverseProjection = this.camera.projectionMatrix.clone().invert();
+      const camInverseProjection = camera.projectionMatrix.clone().invert();
       const cameraPosition = new THREE.Vector3().applyMatrix4(camInverseProjection);
       const mousePosition = new THREE.Vector3(
         (x / width) * 2 - 1,
@@ -156,9 +156,9 @@ async function modelsTerrain() {
           new THREE.Vector3(sceneTransform.scale, -sceneTransform.scale, sceneTransform.scale)
         );
 
-      this.camera.projectionMatrix = m.multiply(l);
+      camera.projectionMatrix = m.multiply(l);
       threeRenderer?.resetState();
-      threeRenderer?.render(this.scene, this.camera);
+      threeRenderer?.render(scene, camera);
       map.triggerRepaint();
     },
   };
