@@ -1,6 +1,7 @@
 import maplibregl from "maplibre-gl";
 import * as dat from "dat.gui";
 import * as THREE from "three";
+import Stats from "stats.js";
 
 import { MAPTILER_KEY, SCENE_ORIGIN } from "src/constants";
 import { modelsList } from "src/models-list";
@@ -10,6 +11,14 @@ import loadModel from "src/utils/loadModel";
 import { sourceMapSheets } from "src/mapRasterSources";
 import guiMapLayersOpacity from "src/utils/guiMapLayersOpacity";
 import addSourceAndLayer from "src/utils/addSourceAndLayer";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
+import { DotScreenPass } from "three/examples/jsm/postprocessing/DotScreenPass";
+
+let mapIsMoving = false;
+const stats = new Stats();
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom);
 
 let hoveredObject: THREE.Object3D | undefined | null;
 let selectedObject: THREE.Object3D | undefined | null;
@@ -17,7 +26,7 @@ let selectedObject: THREE.Object3D | undefined | null;
 const map = new maplibregl.Map({
   container: "map",
   center: SCENE_ORIGIN,
-  zoom: 13.5,
+  zoom: 16,
   pitch: 45,
   maxPitch: 80, // default 60
   bearing: 142.69415138998863, // rotation
@@ -54,6 +63,39 @@ map.addControl(
 
 const scene = new THREE.Scene();
 const camera = new THREE.Camera();
+
+/**
+ * Post processing
+ */
+var width = window.innerWidth || 1;
+var height = window.innerHeight || 1;
+var parameters = {
+  minFilter: THREE.LinearFilter,
+  magFilter: THREE.LinearFilter,
+  format: THREE.RGBAFormat,
+  stencilBuffer: false,
+};
+
+var renderTarget = new THREE.WebGLRenderTarget(width, height, parameters);
+
+// todo: try without passing renderTarget (it may be unnecessary)
+const effectComposer = new EffectComposer(threeRenderer, renderTarget);
+effectComposer.setSize(map.getCanvas().width, map.getCanvas().height);
+effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+/**
+ * first pass
+ */
+const renderPass = new RenderPass(scene, camera);
+renderPass.clear = true; // ensures that each frame starts with a clean slate before rendering the new scene position, eliminating the trailing images.
+effectComposer.addPass(renderPass);
+
+/**
+ * test pass
+ */
+const dotScreenPass = new DotScreenPass();
+dotScreenPass.material.transparent = true; // background transparent
+effectComposer.addPass(dotScreenPass);
 
 async function modelsTerrain() {
   // Custom layer for a 3D model, implementing `CustomLayerInterface`
@@ -136,6 +178,7 @@ async function modelsTerrain() {
      * render
      */
     render(gl, args) {
+      stats.begin();
       const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(SCENE_ORIGIN, 0);
 
       const sceneTransform = {
@@ -158,8 +201,15 @@ async function modelsTerrain() {
 
       camera.projectionMatrix = m.multiply(l);
       threeRenderer?.resetState();
-      threeRenderer?.render(scene, camera);
-      map.triggerRepaint();
+
+      // threeRenderer.render(scene, camera);
+      if (mapIsMoving) {
+        threeRenderer.render(scene, camera);
+      } else {
+        effectComposer.render();
+      }
+
+      stats.end();
     },
   };
 
@@ -180,11 +230,11 @@ async function modelsTerrain() {
     guiMapLayersOpacity(gui, map);
   });
 
-  /**
-   * Map dragend
-   */
-  map.on("dragend", () => {
-    console.log("bearing", map.getBearing());
+  map.on("movestart", () => {
+    mapIsMoving = true;
+  });
+  map.on("moveend", () => {
+    mapIsMoving = false;
   });
 
   /**
